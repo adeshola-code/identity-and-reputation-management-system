@@ -31,6 +31,7 @@
 (define-data-var decay-period uint u10000) ;; In blocks
 (define-data-var starting-reputation uint DEFAULT-STARTING-REPUTATION)
 
+
 ;; Storage Maps
 (define-map identities 
   {owner: principal}
@@ -212,13 +213,13 @@
   (new-score uint)
 )
   (map-set reputation-history
-    {owner: owner, tx-id: (as-contract block-height)}
+    {owner: owner, tx-id: stacks-block-height}
     {
       action-type: action-type,
       previous-score: previous-score,
       new-score: new-score,
       timestamp: burn-block-height,
-      block-height: block-height
+      block-height: stacks-block-height
     }
   )
 )
@@ -244,7 +245,7 @@
 )
 
 (define-private (should-decay (last-decay uint))
-  (>= (- block-height last-decay) (var-get decay-period))
+  (>= (- stacks-block-height last-decay) (var-get decay-period))
 )
 
 ;; Identity Management
@@ -252,7 +253,7 @@
   (let 
     (
       (sender tx-sender)
-      (current-block-height block-height)
+      (current-block-height stacks-block-height)
     )
     (begin
       ;; Check contract is active
@@ -300,7 +301,7 @@
         {owner: sender}
         (merge current-identity {
           active: active,
-          last-updated: block-height
+          last-updated: stacks-block-height
         })
       )
       (ok true)
@@ -362,7 +363,7 @@
             {owner: owner}
             (merge updated-identity {
               reputation-score: new-score,
-              last-updated: block-height,
+              last-updated: stacks-block-height,
               total-actions: total-actions
             })
           )
@@ -411,8 +412,8 @@
         {owner: owner}
         (merge current-identity {
           reputation-score: updated-score,
-          last-updated: block-height,
-          last-decay: block-height
+          last-updated: stacks-block-height,
+          last-decay: stacks-block-height
         })
       )
       
