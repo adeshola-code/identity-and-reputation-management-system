@@ -73,3 +73,77 @@
     (ok true)
   )
 )
+
+(define-public (set-contract-active (active bool))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) (err ERR-NOT-ADMIN))
+    (var-set contract-active active)
+    (ok true)
+  )
+)
+
+(define-public (set-decay-parameters (new-rate uint) (new-period uint))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) (err ERR-NOT-ADMIN))
+    (asserts! (<= new-rate u100) (err ERR-INVALID-PARAMETERS))
+    (asserts! (> new-period u0) (err ERR-INVALID-PARAMETERS))
+    (var-set decay-rate new-rate)
+    (var-set decay-period new-period)
+    (ok true)
+  )
+)
+
+(define-public (set-starting-reputation (new-value uint))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) (err ERR-NOT-ADMIN))
+    (asserts! (<= new-value MAX-REPUTATION-SCORE) (err ERR-INVALID-PARAMETERS))
+    (var-set starting-reputation new-value)
+    (ok true)
+  )
+)
+
+;; Reputation Action Management
+(define-public (add-reputation-action 
+  (action-type (string-ascii 50))
+  (multiplier uint)
+  (description (string-ascii 100))
+)
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) (err ERR-NOT-ADMIN))
+    (asserts! (is-none (map-get? reputation-actions {action-type: action-type})) 
+      (err ERR-ACTION-EXISTS))
+    
+    (map-set reputation-actions 
+      {action-type: action-type} 
+      {
+        multiplier: multiplier,
+        description: description,
+        active: true
+      }
+    )
+    (ok true)
+  )
+)
+
+(define-public (update-reputation-action
+  (action-type (string-ascii 50))
+  (multiplier uint)
+  (description (string-ascii 100))
+  (active bool)
+)
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) (err ERR-NOT-ADMIN))
+    (asserts! (is-some (map-get? reputation-actions {action-type: action-type})) 
+      (err ERR-ACTION-NOT-FOUND))
+    
+    (map-set reputation-actions 
+      {action-type: action-type} 
+      {
+        multiplier: multiplier,
+        description: description,
+        active: active
+      }
+    )
+    (ok true)
+  )
+)
