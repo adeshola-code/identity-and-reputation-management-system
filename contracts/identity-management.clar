@@ -222,3 +222,88 @@
     }
   )
 )
+
+(define-private (get-action-multiplier (action-type (string-ascii 50)))
+  (default-to u0 
+    (get multiplier 
+      (map-get? reputation-actions {action-type: action-type})
+    )
+  )
+)
+
+(define-private (is-action-active (action-type (string-ascii 50)))
+  (default-to false
+    (get active
+      (map-get? reputation-actions {action-type: action-type})
+    )
+  )
+)
+
+(define-private (get-identity-field (owner principal))
+  (map-get? identities {owner: owner})
+)
+
+(define-private (should-decay (last-decay uint))
+  (>= (- block-height last-decay) (var-get decay-period))
+)
+
+;; Identity Management
+(define-public (create-identity (did (string-ascii 50)))
+  (let 
+    (
+      (sender tx-sender)
+      (current-block-height block-height)
+    )
+    (begin
+      ;; Check contract is active
+      (asserts! (var-get contract-active) (err ERR-NOT-ACTIVE))
+      
+      ;; Check if identity already exists
+      (asserts! (is-none (map-get? identities {owner: sender})) 
+        (err ERR-IDENTITY-EXISTS))
+      
+      ;; Validate DID
+      (asserts! (> (len did) MINIMUM_DID_LENGTH) 
+        (err ERR-INVALID-PARAMETERS))
+      
+      ;; Create identity
+      (map-set identities 
+        {owner: sender}
+        {
+          did: did,
+          reputation-score: (var-get starting-reputation),
+          created-at: current-block-height,
+          last-updated: current-block-height,
+          last-decay: current-block-height,
+          total-actions: u0,
+          active: true
+        }
+      )
+      (ok did)
+    )
+  )
+)
+
+(define-public (update-identity-status (active bool))
+  (let
+    (
+      (sender tx-sender)
+      (current-identity 
+        (unwrap! 
+          (map-get? identities {owner: sender}) 
+          (err ERR-IDENTITY-NOT-FOUND)
+        )
+      )
+    )
+    (begin
+      (map-set identities 
+        {owner: sender}
+        (merge current-identity {
+          active: active,
+          last-updated: block-height
+        })
+      )
+      (ok true)
+    )
+  )
+)
